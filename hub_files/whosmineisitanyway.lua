@@ -795,11 +795,9 @@ function command_turtles()
                     if turtle.pair then
                         if turtle.data.turtle_type == 'mining' and turtle.pair.state == 'wait' then
                             if turtle.steps_left <= 0 or (turtle.data.empty_slot_count == 0 and turtle.pair.data.empty_slot_count == 0) or not good_on_fuel(turtle, turtle.pair) then
-                                -- End mission: move chunky first to avoid face-to-face deadlock.
-                                add_task(turtle.pair, {action = 'delay', data = {1}})
-                                add_task(turtle, {action = 'delay', data = {4}})
-                                add_task(turtle, {action = 'pass', end_state = 'idle'})
+                                -- End mission: send chunky up first, hold miner until chunky clears.
                                 add_task(turtle.pair, {action = 'pass', end_state = 'idle'})
+                                add_task(turtle, {action = 'pass', end_state = 'pair_return_hold'})
                             elseif turtle.data.empty_slot_count == 0 then
                                 add_task(turtle, {
                                     action = 'dump',
@@ -837,6 +835,15 @@ function command_turtles()
                         if separation and separation > config.pair_max_separation then
                             pull_pair_together(turtle)
                         end
+                    end
+                elseif turtle.state == 'pair_return_hold' then
+                    -- Prevent miner/chunky lane deadlock: miner waits until chunky has ascended.
+                    if (not turtle.pair) or (not turtle.pair.data) or (not turtle.pair.data.location) then
+                        add_task(turtle, {action = 'pass', end_state = 'idle'})
+                    elseif turtle.pair.data.location.y >= config.locations.mine_enter.y then
+                        add_task(turtle, {action = 'pass', end_state = 'idle'})
+                    else
+                        add_task(turtle, {action = 'delay', data = {1}})
                     end
                 end
             end
