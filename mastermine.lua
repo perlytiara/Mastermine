@@ -1611,8 +1611,7 @@ mine_levels = {
     {level = -16, chance = 0.16},
     {level = -32, chance = 0.11},
     {level = -48, chance = 0.10},
-    {level = -54, chance = 0.05},
-    {level = -59, chance = 0.03},
+    {level = -50, chance = 0.08},
 }
 
 
