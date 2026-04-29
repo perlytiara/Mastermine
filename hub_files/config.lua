@@ -10,7 +10,7 @@ inf = 1e309
 --            Y
 --     ####### #######
 --     ####### #######
-mine_entrance = {x = 104, y = 76, z = 215}
+mine_entrance = {x = 481, y = 71, z = 85}
 c = mine_entrance
 
 
@@ -76,6 +76,18 @@ pocket_timeout = 5
 task_timeout = 0.5
 
 
+-- MAX ALLOWED DISTANCE BETWEEN MINING
+-- TURTLE AND ITS CHUNKY PAIR WHILE
+-- WORKING UNDERGROUND
+pair_max_separation = 10
+
+
+-- IF A TURTLE STOPS HEARING THE HUB FOR THIS
+-- LONG WHILE UNDERGROUND, IT WILL ATTEMPT A
+-- LOCAL FAILSAFE RETURN
+turtle_link_loss_timeout = 20
+
+
 -- EVERY BLOCK NAME CONTAINING ANY OF THESE
 -- STRINGS WILL NOT BE MINED
 --     e.g. "chest" will prevent "minecraft:trapped_chest".
@@ -101,7 +113,20 @@ mine_levels = {
     -- {level = 40, chance = 0.2},
     -- {level = 12, chance = 0.5},
 
-    {level = 63, chance = 1.0},
+    -- 1.18+ friendly spread:
+    -- - upper levels for coal/iron
+    -- - mid levels for iron/gold
+    -- - deep levels strongly weighted for diamond/redstone/lapis
+    {level = 64, chance = 0.12},
+    {level = 48, chance = 0.10},
+    {level = 32, chance = 0.11},
+    {level = 16, chance = 0.12},
+    {level = 0, chance = 0.10},
+    {level = -16, chance = 0.16},
+    {level = -32, chance = 0.11},
+    {level = -48, chance = 0.10},
+    {level = -54, chance = 0.05},
+    {level = -59, chance = 0.03},
 }
 
 

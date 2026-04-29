@@ -233,6 +233,18 @@ function go(direction, nodig)
         return false
     end
     if not move[direction]() then
+        if direction == 'forward' then
+            local inspected, block = inspect.forward()
+            if inspected and block and block.name and string.find(string.lower(block.name), 'turtle') then
+                -- If another turtle blocks the lane, try to pass above it instead of digging.
+                if (not detect.up()) and go('up', true) and go('forward', true) then
+                    if not detect.down() then
+                        go('down', true)
+                    end
+                    return true
+                end
+            end
+        end
         if attack[direction] then
             attack[direction]()
         end
@@ -416,6 +428,19 @@ end
 
 function go_to_mine_exit(strip)
     if state.location.y < config.locations.mine_enter.y or (state.location.x == config.locations.mine_exit.x and state.location.z == config.locations.mine_exit.z) then
+        if not strip then
+            -- Fallback when strip metadata is missing/corrupt.
+            if state.location.x ~= config.locations.mine_exit.x then
+                if not go_to_axis('x', config.locations.mine_exit.x) then return false end
+            end
+            if state.location.z ~= config.locations.mine_exit.z then
+                if not go_to_axis('z', config.locations.mine_exit.z) then return false end
+            end
+            if state.location.y ~= config.locations.mine_exit.y then
+                if not go_to_axis('y', config.locations.mine_exit.y) then return false end
+            end
+            return basics.in_location(state.location, config.locations.mine_exit)
+        end
         if state.location.x == config.locations.mine_enter.x and state.location.z == config.locations.mine_enter.z then
             -- If directly under mine_enter, shift over to exit
             if not go_to_axis('z', config.locations.mine_exit.z) then return false end

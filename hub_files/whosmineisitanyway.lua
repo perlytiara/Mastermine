@@ -448,15 +448,48 @@ end
 
 function send_turtle_up(turtle)
     if turtle.data.location.y < config.locations.mine_enter.y then
-        if turtle.strip then
-            
-            if turtle.data.turtle_type == 'chunky' and turtle.data.location.y == turtle.strip.y then
-                add_task(turtle, {action = 'delay', data={3}})
+        if turtle.data.turtle_type == 'mining' and turtle.pair then
+            local distance_to_pair = pair_distance(turtle, turtle.pair)
+            if distance_to_pair and distance_to_pair <= 2 then
+                -- Let chunky move first so miner does not run into it.
+                add_task(turtle, {action = 'delay', data={2}})
             end
-            
-            add_task(turtle, {action = 'go_to_mine_exit', data = {turtle.strip}})
         end
+        if turtle.strip and turtle.data.turtle_type == 'chunky' and turtle.data.location.y == turtle.strip.y then
+            add_task(turtle, {action = 'delay', data={3}})
+        end
+        add_task(turtle, {action = 'go_to_mine_exit', data = {turtle.strip}})
     end
+end
+
+
+function pair_distance(turtle1, turtle2)
+    if (not turtle1) or (not turtle2) then
+        return nil
+    end
+    if (not turtle1.data) or (not turtle2.data) then
+        return nil
+    end
+    if (not turtle1.data.location) or (not turtle2.data.location) then
+        return nil
+    end
+    return basics.distance(turtle1.data.location, turtle2.data.location)
+end
+
+
+function pull_pair_together(mining_turtle)
+    local chunky_turtle = mining_turtle.pair
+    if not chunky_turtle then
+        return
+    end
+    if chunky_turtle.state == 'halt' or #chunky_turtle.tasks > 0 then
+        return
+    end
+    add_task(chunky_turtle, {
+        action = 'go_to',
+        data = {mining_turtle.data.location, nil, 'xyz', true},
+        end_state = 'mine',
+    })
 end
 
 
@@ -533,6 +566,13 @@ function user_input(input)
         else
             turtles = state.turtles
         end
+        if command == 'return' and turtle_id_string and turtle_id_string ~= '*' then
+            -- If returning a single turtle, include its pair so both come back together.
+            local target = turtles[1]
+            if target and target.pair then
+                turtles = {[target.id] = target, [target.pair.id] = target.pair}
+            end
+        end
         if command == 'turtle' then
             -- SEND COMMAND DIRECTLY TO TURTLE
             local action = next_word()
@@ -581,12 +621,35 @@ function user_input(input)
             end
         elseif command == 'return' then
             -- BRING TURTLE HOME
+            local handled_return = {}
             for _, turtle in pairs(turtles) do
-                turtle.tasks = {}
-                add_task(turtle, {action = 'pass'})
-                halt(turtle)
-                send_turtle_up(turtle)
-                add_task(turtle, {action = 'go_to_home'})
+                if handled_return[turtle.id] then
+                    -- already handled as somebody's pair
+                elseif turtle.pair and turtle.data.turtle_type == 'mining' then
+                    handled_return[turtle.id] = true
+                    handled_return[turtle.pair.id] = true
+                    -- Move chunky partner out first, then miner.
+                    local chunky = turtle.pair
+                    chunky.tasks = {}
+                    add_task(chunky, {action = 'pass'})
+                    halt(chunky)
+                    send_turtle_up(chunky)
+                    add_task(chunky, {action = 'go_to_home'})
+
+                    turtle.tasks = {}
+                    add_task(turtle, {action = 'pass'})
+                    halt(turtle)
+                    add_task(turtle, {action = 'delay', data = {4}})
+                    send_turtle_up(turtle)
+                    add_task(turtle, {action = 'go_to_home'})
+                else
+                    handled_return[turtle.id] = true
+                    turtle.tasks = {}
+                    add_task(turtle, {action = 'pass'})
+                    halt(turtle)
+                    send_turtle_up(turtle)
+                    add_task(turtle, {action = 'go_to_home'})
+                end
             end
         elseif command == 'halt' then
             -- HALT TURTLE(S)
@@ -732,6 +795,9 @@ function command_turtles()
                     if turtle.pair then
                         if turtle.data.turtle_type == 'mining' and turtle.pair.state == 'wait' then
                             if turtle.steps_left <= 0 or (turtle.data.empty_slot_count == 0 and turtle.pair.data.empty_slot_count == 0) or not good_on_fuel(turtle, turtle.pair) then
+                                -- End mission: move chunky first to avoid face-to-face deadlock.
+                                add_task(turtle.pair, {action = 'delay', data = {1}})
+                                add_task(turtle, {action = 'delay', data = {4}})
                                 add_task(turtle, {action = 'pass', end_state = 'idle'})
                                 add_task(turtle.pair, {action = 'pass', end_state = 'idle'})
                             elseif turtle.data.empty_slot_count == 0 then
@@ -744,6 +810,14 @@ function command_turtles()
                                 add_task(turtle.pair, {action = 'pass', end_state = 'mine'})
                                 go_mine(turtle)
                             end
+                        elseif turtle.data.turtle_type == 'mining' and #turtle.pair.tasks == 0 then
+                            -- Pair got out of sync; regroup at strip before continuing.
+                            add_task(turtle.pair, {
+                                action = 'go_to_strip',
+                                data = {turtle.pair.strip},
+                                end_state = 'wait',
+                            })
+                            add_task(turtle, {action = 'delay', data = {1}})
                         end
                     elseif not config.use_chunky_turtles then
                         if turtle.steps_left <= 0 or turtle.data.empty_slot_count == 0 or not good_on_fuel(turtle) then
@@ -758,6 +832,11 @@ function command_turtles()
                 elseif turtle.state == 'mine' then
                     if config.use_chunky_turtles and not turtle.pair then
                         add_task(turtle, {action = 'pass', end_state = 'idle'})
+                    elseif turtle.data.turtle_type == 'mining' and turtle.pair then
+                        local separation = pair_distance(turtle, turtle.pair)
+                        if separation and separation > config.pair_max_separation then
+                            pull_pair_together(turtle)
+                        end
                     end
                 end
             end

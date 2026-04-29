@@ -6,7 +6,7 @@ Here's all the code for anyone who is interested! Check out the tutorial below f
 Also, here are steps for a quick install via pastebin:
 
 1. Place your advanced computer next to a disk drive with a blank disk in.
-2. Run `pastebin get CtcSGkpc mastermine.lua`
+2. Run `pastebin get L6mTXsT6 mastermine.lua`
 3. Run `mastermine disk`
 4. Run `disk/hub.lua`
 
@@ -58,7 +58,7 @@ There's a built in limit in computer craft for how much data a floppy disk can s
 1. The size of floppy disks can be increased in the mod's config file, assuming you have access to that (this is the preferred option).
 2. There are a number of reasons one might not be able to edit the config file, so there is a second, workaround-y option in which the data isn't fully stored on the disk. To do it, start with the regular computer + monitor + modem + disk drive + floppy disk setup, and then enter the following into the hub computer:
 
-       pastebin get CtcSGkpc mastermine.lua
+       pastebin get L6mTXsT6 mastermine.lua
        mkdir files
        mastermine files
        mv files/hub_files/* .
@@ -85,3 +85,11 @@ Peripherals Plus One
 https://github.com/rolandoislas/PeripheralsPlusOne
 
 Required by PeripheralsPlusOne: https://www.curseforge.com/minecraft/mc-mods/the-framework
+
+## Quick update helper
+
+Run `fleet_update` on the hub computer to automate:
+
+1. `mastermine disk`
+2. send `update` to all known turtles
+3. send `reboot` to all known turtles
